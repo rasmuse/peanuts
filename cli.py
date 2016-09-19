@@ -104,7 +104,7 @@ def collect_item():
 
     click.echo('')
     if ask_confirm():
-        return (person_id, peanut_id, score, properties, comment)
+        return (person_id, 'J{}'.format(peanut_id), score, properties, comment)
     else:
         raise click.Abort()
     
