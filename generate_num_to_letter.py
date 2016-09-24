@@ -1,6 +1,6 @@
 import numpy as np
 import json
-letters = [l for l in 'ABCDEFGHIJKLMNOPQRSTUVXYZ']
+letters = [l for l in 'ABCDEFGHIJKLMNOPQRST']
 numbers = np.random.permutation(np.arange(len(letters)))
 num_to_letter = {'{:02}'.format(n): l for n, l in zip(numbers, letters)}
 print(num_to_letter)
