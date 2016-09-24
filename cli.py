@@ -26,16 +26,48 @@ prompt_toolkit.key_binding.manager.KeyBindingManager(
     enable_extra_page_navigation=False, enable_auto_suggest_bindings=False,
     enable_all=True)
 
-TBF_VALUES = ['a', 'c']
-N_PEANUTS = 20
+PERSON_CODES = [
+    "ARN",
+    "ATG",
+    "BBR",
+    "CDN",
+    "DAG",
+    "DDR",
+    "DFT",
+    "EKG",
+    "FTV",
+    "GHG",
+    "GIS",
+    "HVB",
+    "IFK",
+    "JPY",
+    "KTB",
+    "LED",
+    "MMX",
+    "NDF",
+    "NPV",
+    "OSV",
+    "PSI",
+    "PTP",
+    "RNA",
+    "ROT",
+    "SAS",
+    "SCB",
+    "TPP",
+    "USA",
+    "VPN",
+    "WWW",
+    ]
+
+N_PEANUTS = 18
 PROPERTY_NAMES = ['Salt', 'Knaprig', 'Rostad', 'Flottig']
 
 COLUMNS = (
-    ["Timestamp","Din TBF","Vilken jordnöt?"]
+    ["Timestamp","Din TBF","Jordnötens nummer"]
     + PROPERTY_NAMES
     + ["Betygsätt totalupplevelsen","Kommentar"])
 
-CSV_SETTINGS = dict(delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+CSV_SETTINGS = dict(delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 def create_file(path):
     with open(path, 'x') as f:
         w = csv.writer(f, **CSV_SETTINGS)
@@ -52,15 +84,15 @@ class Restart(Exception): pass
 
 class NumberValidator(Validator):
     def __init__(self, min_, max_):
-        self._min = min_
-        self._max = max_
+        self.min_ = min_
+        self.max_ = max_
 
     def validate(self, document):
         text = document.text
 
         i = 0
         if text.isdigit():
-            if self._min <= int(text) <= self._max:
+            if self.min_ <= int(text) <= self.max_:
                 return
         else:
             for i, c in enumerate(text):
@@ -68,7 +100,7 @@ class NumberValidator(Validator):
                     break
 
         raise ValidationError(
-            message='Mata in ett tal ({}-{})'.format(self._min, self._max),
+            message='Mata in ett tal ({}-{})'.format(self.min_, self.max_),
             cursor_position=i)
 
 class SetValidator(Validator):
@@ -78,7 +110,7 @@ class SetValidator(Validator):
     def validate(self, document):
         text = document.text
 
-        if text not in self._values:
+        if text.upper() not in self._values:
             raise ValidationError(
                 message='Otillåtet värde',
                 cursor_position=len(text))
@@ -88,11 +120,6 @@ class SetValidator(Validator):
 def main(path):
     create_file(path)
 
-    progression = [
-        ('asking', 'TBF'),
-        ('asking', 'Vilken jordnöt'),
-        ('asking', 'Salt'),
-    ]
     context = {'items': []}
     def get_state():
         return context['current']
@@ -111,6 +138,8 @@ def main(path):
                 ]
         if state[0] == 'canceling':
             return [(Token, 'Avbryt? (j/n) ')]
+        if state == 'confirm_done':
+            return [(Token, 'Klar! Tryck ENTER för att spara.')]
 
         raise RuntimeError(state)
 
@@ -144,18 +173,18 @@ def main(path):
     things = (
         [
         'NY JORDNÖT\n==============\n',
-        {'key': "Din TBF", 'v': SetValidator(TBF_VALUES)},
-        {'key': "Vilken jordnöt?", 'v': NumberValidator(1, N_PEANUTS)},
+        {'key': "Din TBF", 'v': SetValidator(PERSON_CODES), 'type_converter': str},
+        {'key': "Jordnötens nummer", 'v': NumberValidator(1, N_PEANUTS), 'type_converter': int},
         '\n\nDin åsikt\n-----------------\n',
-        {'key': "Betygsätt totalupplevelsen", 'v': NumberValidator(1, 7)},
+        {'key': "Betygsätt totalupplevelsen", 'v': NumberValidator(1, 7), 'type_converter': int},
         '\n\nBeskriv jordnöten\n-----------------\n',
         ]
         +
-        [{'key': n, 'v': NumberValidator(1, 7)} for n in PROPERTY_NAMES]
+        [{'key': n, 'v': NumberValidator(1, 7), 'type_converter': int} for n in PROPERTY_NAMES]
         +
-        [{'key': "Kommentar", 'v': None}]
+        [{'key': "Kommentar", 'v': None, 'type_converter': str}]
         )
-    
+
     while True:
         try:
             clear()
@@ -166,7 +195,10 @@ def main(path):
                     continue
 
                 k, validator = t['key'], t['v']
-                set_state(('asking', k))
+                label = k
+                if isinstance(validator, NumberValidator):
+                    label += ' ({}-{})'.format(validator.min_, validator.max_)
+                set_state(('asking', label))
                 inp = prompt(
                     get_prompt_tokens=prompt_tokens,
                     get_bottom_toolbar_tokens=get_toolbar_tokens,
@@ -174,12 +206,19 @@ def main(path):
                     style=style,
                     validator=validator
                     )
-                item[k] = inp
+                item[k] = t['type_converter'](inp)
+            set_state('confirm_done')
+            prompt(
+                    get_prompt_tokens=prompt_tokens,
+                    get_bottom_toolbar_tokens=get_toolbar_tokens,
+                    key_bindings_registry=mgr.registry,
+                    style=style,
+                    )
             save(path, item)
         except Restart:
             pass
-            
-    
+
+
 
 if __name__ == '__main__':
     main()
