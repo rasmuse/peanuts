@@ -207,6 +207,7 @@ def main(path):
                     validator=validator
                     )
                 item[k] = t['type_converter'](inp)
+                item[k] = inp
             set_state('confirm_done')
             prompt(
                     get_prompt_tokens=prompt_tokens,
