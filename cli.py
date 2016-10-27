@@ -59,7 +59,7 @@ PERSON_CODES = [
     "WWW",
     ]
 
-N_PEANUTS = 18
+N_PEANUTS = 20
 PROPERTY_NAMES = ['Salt', 'Knaprig', 'Rostad', 'Flottig']
 
 COLUMNS = (
